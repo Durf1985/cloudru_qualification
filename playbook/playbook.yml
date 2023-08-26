@@ -1,0 +1,44 @@
+---
+- name: Configure remote host
+  hosts: cloudru
+  become: true
+
+  tasks:
+    - name: Check if cloudru user exists
+      command: id cloudru
+      register: user_exists
+      failed_when: false
+      changed_when: false
+
+    - name: Create user cloudru and set password only if user does not exist
+      user:
+        name: cloudru
+        password: "{{ cloudru_password | password_hash('sha512') }}"
+        state: present
+      when: user_exists.rc != 0
+
+    - name: Allow SSH key authentication
+      lineinfile:
+        path: /etc/ssh/sshd_config
+        regexp: '^\s*PasswordAuthentication\s+'
+        line: 'PasswordAuthentication no'
+      notify: Restart sshd
+
+    - name: Deny SSH login for root user
+      lineinfile:
+        path: /etc/ssh/sshd_config
+        regexp: '^\s*PermitRootLogin\s+'
+        line: 'PermitRootLogin no'
+      notify: Restart sshd
+
+    - name: Copy public key for cloudru user
+      authorized_key:
+        user: cloudru
+        state: present
+        key: "{{ lookup('file', playbook_dir + '/cloud.pub') }}"
+
+  handlers:
+    - name: Restart sshd
+      systemd:
+        name: ssh
+        state: restarted
