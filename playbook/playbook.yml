@@ -9,7 +9,8 @@
       register: user_exists
       failed_when: false
       changed_when: false
-
+# We check if the 'cloudru' user exists because the 'password_hash' value changes on every playbook run.
+# This check ensures idempotence.
     - name: Create user cloudru and set password only if user does not exist
       user:
         name: cloudru
