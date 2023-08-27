@@ -47,23 +47,83 @@ You also can use inventory from vagrant inventory file in directory `your_repo/p
 
 However, for optimal idempotency testing, it's advisable to use specialized tools like `Molecule`.
 
-## 2. Web приложение на Python
+## 2. Web application on Python
 
-### Приложение
+* A Python script has been created using `Fastapi` to assign endpoints.
+* Created endpoints:
+    `/id`
+    `/hostname`
+    `/author`
+    `readiness`
+    `liveness`
+* A dependency file `requirements.txt` has been created for launching applications
 
-Требуется написать простое веб-приложение на Python, которое слушает входящие соединения на порту 8000 и предоставляет HTTP API, в котором реализовано 3 метода:
+### How to setup application
 
-* GET /hostname - при запросе на этот метод приложение отдает имя хоста, на котором запущено приложение
-* GET /author - возвращает значение переменной окружения $AUTHOR, в которой задано имя или никнейм человека, выполняющего это задание
-* GET /id - возвращает значение переменной окружения $UUID, содержащее любую произвольную строку-идентификатор в формате uuid
+setup dependecies
 
-### Dockerfile
+```bash
+cd ~/your_repo/app
+pip install --upgrade -r requirements.txt
+```
 
-Необходимо написать Dockerfile для полученного приложения в соответствии с принятыми в сообществе best-practice.
+After launch your app
 
-Полученный скрипт и Dockerfile к нему положить в папку /app
+```bash
+AUTHOR=some_name UUID=some_valid_uuid_v4_or_not_valid_to_check_readiness_probe  uvicorn main:app --host 0.0.0.0 --port 8000 --reload
+```
 
-### Kubernetes manifest
+### How to check application
+
+```bash
+curl http://localhost:8000/created_endpoints
+```
+
+## 3. Dockerfile
+
+A Dockerfile was created in the `your_repo/app` directory. To create it was used:
+
+* Images are based on alpine.
+* Specific versions of base images are pinned during the build.
+* Dependencies in the `requirements.txt` file are pinned to specific versions required for the application's execution.
+* Multi-stage build is employed.
+* Layers that are likely to change frequently, such as app source code, are positioned towards the end of the Dockerfile.
+* The final image is created as `rootless`.
+
+I am aware of the existence of distroless images, https://github.com/GoogleContainerTools/distroless but the documentation separately states:
+
+```text
+The following images are also published on gcr.io, but are considered experimental and not recommended for production usage:
+gcr.io/distroless/python3-debian11
+```
+
+As a result, I chose not to utilize it.
+
+I also chose not to set a default value for the environment variable UUID, because it's challenging for people to comprehend and remember entries like `54015250-c765-48a3-9921-6bc47bb40e11`. If you happen to forget to specify this variable in a Kubernetes Deployment, your application will fail the readiness check. But if you have a default value set, this might go unnoticed.
+
+### How to create docker image
+
+To create the final image, run the following commands:
+
+```bash
+cd ~/your_repo/app
+docker build -t your_hub_name/image_name:tag .
+# If necessary, push to your custom Docker registry or Docker Hub
+docker push your_hub_name/image_name:tag
+```
+
+### How to check your image
+
+To test your image, run the following commands:
+
+```bash
+# You can try different scenarios by passing a valid or invalid UUID to the variable.
+docker run -e UUID=some_valid_or_not_UUID -d -p 8000:8000 your_hub_name/image_name:tag
+
+curl http://localhost:8000/endpoints_in_app
+```
+
+## Kubernetes manifest
 
 Далее необходимо написать манифест для запуска приложения в Kubernetes в отдельном неймспейсе в виде Deployment с 3 репликами и сервиса с типом ClusterIP. Реализовать readiness- и liveness- пробы. В переменную UUID должен подставляться уникальный идентификатор пода в кластере, в котором запущено приложение.
 
