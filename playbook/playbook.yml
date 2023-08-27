@@ -28,7 +28,7 @@
 
 # When using key-based authentication, it's recommended to disable password authentication.
 # In the original task, there is no condition to disable password-based authentication, so I annotated the code performing this task as a comment.
-    # - name: Allow SSH key authentication
+    # - name: Disable password authentication
     #   lineinfile:
     #     path: /etc/ssh/sshd_config
     #     regexp: '^\s*PasswordAuthentication\s+'
