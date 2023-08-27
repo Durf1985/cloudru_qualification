@@ -90,7 +90,7 @@ A Dockerfile was created in the `your_repo/app` directory. To create it was used
 * Layers that are likely to change frequently, such as app source code, are positioned towards the end of the Dockerfile.
 * The final image is created as `rootless`.
 
-I am aware of the existence of distroless images, https://github.com/GoogleContainerTools/distroless but the documentation separately states:
+I am aware of the existence of distroless images, <https://github.com/GoogleContainerTools/distroless> but the documentation separately states:
 
 ```text
 The following images are also published on gcr.io, but are considered experimental and not recommended for production usage:
@@ -125,11 +125,46 @@ curl http://localhost:8000/endpoints_in_app
 
 ## Kubernetes manifest
 
-Далее необходимо написать манифест для запуска приложения в Kubernetes в отдельном неймспейсе в виде Deployment с 3 репликами и сервиса с типом ClusterIP. Реализовать readiness- и liveness- пробы. В переменную UUID должен подставляться уникальный идентификатор пода в кластере, в котором запущено приложение.
+* A `deployment.yml` manifest has been created, which sets up the namespace `cloudru` and the deployment itself.
+* A `service.yml` manifest with a ClusterIP type has been created to serve the deployment.
 
-Манифест положить в папку /manifest
+The deployment has 3 replicas. The `UUID` variable is assigned the value of `meta.uid` during the deployment rollout. This variable is used in the `readiness` probe within the application code. The `AUTHOR` variable is also used for the `readiness` probe validation, ensuring you didn't forget to set the variable in the Dockerfile.
 
-Для локального запуска кластера можно использовать инструменты Docker Desktop, kind, minikube и другие
+### How to rollout your deployment
+
+If you don't have kubernetes cluster use minikube
+
+```bash
+minikube start  --kubernetes-version=v1.26.3
+```
+
+rollout your deployment
+
+```bash
+cd ~/your_repo/manifest
+kubectl apply -f ./
+```
+
+### How to check your deploy
+
+Check readiness your pods and your service
+
+```bash
+kubectl get pod -n your_namespace
+kubectl get svc -n your_namespace
+# or inspect events to catch errors
+watch kubectl events -n your_namespace
+# or inspect pod logs
+kubectl logs pod_name -n your_namespace --watch
+```
+
+Check working your app
+
+```bash
+kubectl port-forward your_pod_name 8000:8000
+# open new terminal
+curl http://localhost:8000/endpoints
+```
 
 ### Helm chart
 
