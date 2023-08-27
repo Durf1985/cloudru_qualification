@@ -1,6 +1,6 @@
 ---
 - name: Configure remote host
-  hosts: cloudru
+  hosts: all
   become: true
 
   tasks:
@@ -17,13 +17,23 @@
         password: "{{ cloudru_password | password_hash('sha512') }}"
         state: present
       when: user_exists.rc != 0
-
+# Actually, this task is not necessary, as the OS image "ubuntu2204" already has 'PubkeyAuthentication' set to "yes" by default.
+# See `man sshd_config`
     - name: Allow SSH key authentication
       lineinfile:
         path: /etc/ssh/sshd_config
-        regexp: '^\s*PasswordAuthentication\s+'
-        line: 'PasswordAuthentication no'
+        regexp: '^\s*#PubkeyAuthentication\s+'
+        line: 'PubkeyAuthentication yes'
       notify: Restart sshd
+
+# When using key-based authentication, it's recommended to disable password authentication.
+# In the original task, there is no condition to disable password-based authentication, so I annotated the code performing this task as a comment.
+    # - name: Disable password authentication
+    #   lineinfile:
+    #     path: /etc/ssh/sshd_config
+    #     regexp: '^\s*PasswordAuthentication\s+'
+    #     line: 'PasswordAuthentication no'
+    #   notify: Restart sshd
 
     - name: Deny SSH login for root user
       lineinfile:

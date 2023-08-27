@@ -1,1 +1,2 @@
+# Actually it is better to use ansible-vault to encrypt secret data
 cloudru_password: cloudpass
