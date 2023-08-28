@@ -166,12 +166,29 @@ kubectl port-forward your_pod_name 8000:8000
 curl http://localhost:8000/endpoints
 ```
 
-### Helm chart
+## Helm chart
 
-Написать Helm чарт, в котором через переменные в файле values.yaml можно задать:
+In the `/helm` directory, a chart has been created that sets up a deployment and a service for it, as well as a `README.md` file generated using the `helm-docs` utility.
 
-* имя образа, запускаемого в поде
-* количество реплик приложения
-* значение, подставляемое в переменную AUTHOR
+### How to setup and deploy helm chart
 
-Полученный чарт положить в папку /helm
+```bash
+cd ~/your_repo/helm
+# Ensure your manifests are correctly generated
+helm template .
+# Deploy
+helm upgrade --install your_release_name . --namespace your_namespace --create-namespace
+```
+
+### How to check your deployed chart
+
+```bash
+# Check created service name
+kubectl get svc -n your_namespace
+# Launch pod with curl and sh/bash/etc
+kubectl run pod_name --image image_with_curl_and_sh -n your_namespace
+k exec -it debug -n your_namespace -- sh
+# within container check your app endpoints
+curl http://service_name:8000/endpoints
+```
+Endpoints such as `/id` `/hostname` can be checked several times in a row to ensure that your service is load balancing between different pods, and you can receive a different `UUID` and `/hostname` from each pod.
